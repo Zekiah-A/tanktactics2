@@ -1,0 +1,14 @@
+{
+  "name": "TankTactics",
+  "short_name": "TankTactics",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "display": "fullscreen",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [{
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+   }]
+}
