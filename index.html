@@ -9,7 +9,6 @@
 	<link rel="shortcut icon" href="icon.png" type="image/x-icon">
 </head>
 	<body id="menubody">
-		<script>let log, _ws, sock; [log,console.log,_ws,WebSocket] = [console.log,()=>{},WebSocket,function(a){return (sock=new _ws(a))}]</script>
 		<div style="filter: blur(10px);transition:filter .3s;height:100%">
 			<div id="button">Make a move</div>
 			<div id="canvparent">
@@ -29,7 +28,6 @@
 	</body>
 	<script>
 		nameinput.value = localStorage.name || ""
-		console.log = log; WebSocket = _ws; _ws = sock.onmessage; sock.onmessage = function(e){if(e.data != 'reload')_ws(e)}
 		let touch1 = null, touch2 = null, touchmoved = 3;
 		document.body.ontouchstart = function(e){
 			for(let t of e.changedTouches){
@@ -570,10 +568,10 @@
 		let FREQ = 432e5
 		let PLAYERS = []
 		let COLORS = ['#E52', '#E25', '#5E5', '#22E', '#85E', '#888', '#EE2', '#2EE', '#E5E', '#C00', '#292', 'var(--color)', '#917', '#851', '#277']
-		let ws = null /*('wss://localhost:443')*/
+		let ws = null
 		function newgame(){
 			unpause()
-			ws = new WebSocket('ws://localhost:80/' + localStorage.token + '/' + (localStorage.name || ''))
+			ws = new WebSocket('ws://server.canv.tk:443/' + localStorage.token + '/' + (localStorage.name || ''))
 			ws.onmessage = function(e){
 				let [code, ...data] = e.data.split('\n'), meta;
 				[code, ...meta] = code.split(' ')
