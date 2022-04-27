@@ -27,7 +27,7 @@
 			<div style="font-size:70px;text-align:center;margin-top: 20vh;margin-bottom: 20vh">Tank-Tactics!</div>
 			<div class="btn" onclick="newgame()">Join game</div>
 			<div class="btn" onclick="tutorial()">Tutorial</div>
-			<div class="btn">Name: <input id="nameinput" onchange="localStorage.name=this.value;this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" /></div>
+			<div class="btn">Name: <input id="nameinput" onchange="localStorage.name=this.value;this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" spellcheck="no" /></div>
 		</titlescreen>
 		<tut>
 
@@ -203,7 +203,7 @@
 		function renderButtonHTML(){
 			let a = me ? me.action : 0
 			let left = FREQ/1000 - (Date.now()%FREQ)/1000 + a * FREQ/-1000
-			let votes = (selected && selected != me)
+			let votes = (selected && selected != me && me && me.health < 1)
 			let html = (me && me.el.parentElement) || votes ? (a > 0 || votes ? buttonHTML : `<svg viewBox="0 0 20 20" style="height: 12px;fill:var(--color)"><path d="M13.558 14.442l-4.183-4.183V4h1.25v5.741l3.817 3.817-.884.884z"></path><path d="M10 19.625A9.625 9.625 0 1119.625 10 9.636 9.636 0 0110 19.625zm0-18A8.375 8.375 0 1018.375 10 8.384 8.384 0 0010 1.625z"></path></svg> ${left>=3600?(''+Math.floor(left/3600)).padStart(2,"0")+'h':''}${(''+Math.floor((left/60))%60).padStart(2,"0")}m`) : "Spectating"
 			if(button.innerHTML == html)return
 			button.innerHTML = html

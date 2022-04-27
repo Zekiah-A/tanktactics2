@@ -23,8 +23,19 @@ FREQ *= 1; WIDTH *= 1; HEIGHT *= 1; POINTS *= 1
 if(FORCE_DEFAULT)WIDTH = DEFAULT_WIDTH, HEIGHT = DEFAULT_HEIGHT, FREQ = DEFAULT_FREQUENCY * 1000
 GAME = GAME.map(tank)
 let POSITIONS = new Set(GAME.map(a=>a.x+' '+a.y))
-
 let maximumPlayers = Math.min(MAX_PLAYERS >= 1 ? MAX_PLAYERS : WIDTH * HEIGHT * MAX_PLAYERS, WIDTH * HEIGHT)
+
+;(async()=>{
+	for await(const _ of fs.watch('game')){
+		[META, ...GAME] = (await fs.readFile('game').catch(e => `${DEFAULT_FREQUENCY * 1000} ${DEFAULT_WIDTH} ${DEFAULT_HEIGHT} -3`)).toString().trim().split('\n')
+		;[FREQ, WIDTH, HEIGHT, POINTS] = META.split(' ')
+		FREQ *= 1; WIDTH *= 1; HEIGHT *= 1; POINTS *= 1
+		if(FORCE_DEFAULT)WIDTH = DEFAULT_WIDTH, HEIGHT = DEFAULT_HEIGHT, FREQ = DEFAULT_FREQUENCY * 1000
+		GAME = GAME.map(tank)
+		POSITIONS = new Set(GAME.map(a=>a.x+' '+a.y))
+		maximumPlayers = Math.min(MAX_PLAYERS >= 1 ? MAX_PLAYERS : WIDTH * HEIGHT * MAX_PLAYERS, WIDTH * HEIGHT)
+	}
+})()
 
 let savegame = () => fs.writeFile('game', `${FREQ} ${WIDTH} ${HEIGHT} ${POINTS}` + GAME.map(tostring).join(''))
 
@@ -88,8 +99,8 @@ wss.on('connection', async function(sock, {url}){
 	let [, token, name] = url.split('/')
 	let index = GAME.findIndex(a => a.token == token), me = GAME[index]
 	if(!me && (POINTS < 1 || ALLOW_MIDGAME_JOINS) && GAME.length < maximumPlayers)me = GAME[index = newplayer(token, name, sock)]
-	sock.send(`board ${FREQ} ${WIDTH} ${HEIGHT} ${index}` + GAME.map(tostringclient).join(''))
 	if(ALLOW_RENAMING && me)me.name = name
+	sock.send(`board ${FREQ} ${WIDTH} ${HEIGHT} ${index}` + GAME.map(tostringclient).join(''))
 	sock.on('message', function(msg){
 		msg = msg.toString()
 		let [code] = msg.split('\n'), meta;
