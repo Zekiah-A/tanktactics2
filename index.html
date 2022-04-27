@@ -276,6 +276,7 @@
 				else{
 					me.action--
 					selected.action++
+					return deselectMe()
 				}
 			}
 			if(me.data.health < 1)return
@@ -487,7 +488,7 @@
 			{ text: "You can upgrade your tank to increase your range", action: () => me.action += 3, tap }, //18
 			{ text: "Click on your tank", action: () => (focus(me.x, me.y, false), tutfocus(me.el)) }, //19
 			{ text: "Upgrade below!", action: () => tutfocus(button) }, //20
-			{ text: "Nice range!\nNo one messes with you!", action: () => (selected = me, me.data.selected=1, tutfocus(me.el, canvgrid),localStorage.tutorial='true'), tap } //21
+			{ text: "Nice range!\nNo one messes with you!", action: () => (selected = me, me.data.selected=1, game.classList.remove('blurnodes'),localStorage.tutorial='true'), tap } //21
 		]; let currentTutorial, enemy, ally, enemy2
 		let lastTutorial = 0
 		function next(){
