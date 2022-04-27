@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" ontouchstart="if(!event.target.getAttribute('no-ua')!=null)event.preventDefault()">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="style.css" rel="stylesheet">
+	<title>TankTactics!</title>
+	<link rel="shortcut icon" href="icon.png" type="image/x-icon">
+</head>
+	<body id="menubody">
+		<script>let log, _ws, sock; [log,console.log,_ws,WebSocket] = [console.log,()=>{},WebSocket,function(a){return (sock=new _ws(a))}]</script>
+		<div style="filter: blur(10px);transition:filter .3s;height:100%">
+			<div id="button">Make a move</div>
+			<div id="canvparent">
+				<div id="canvselect"></div>
+				<div id="canvgrid"></div>
+			</div>
+		</div>
+		<titlescreen>
+			<div style="font-size:70px;text-align:center;margin-top: 20vh;margin-bottom: 20vh">Tank-Tactics!</div>
+			<div class="btn" onclick="newgame()">Join game</div>
+			<div class="btn" onclick="tutorial()">Tutorial</div>
+			<div class="btn">Name: <input id="nameinput" onkeypress="localStorage.name=this.value;if(event.keyCode==13)this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" /></div>
+		</titlescreen>
+		<tut>
+
+		</tut>
+	</body>
+	<script>
+		nameinput.value = localStorage.name || ""
+		console.log = log; WebSocket = _ws; _ws = sock.onmessage; sock.onmessage = function(e){if(e.data != 'reload')_ws(e)}
+		let touch1 = null, touch2 = null, touchmoved = 3;
+		document.body.ontouchstart = function(e){
+			for(let t of e.changedTouches){
+				if(!touch1)touch1 = t, touchmoved = 3
+				else if(!touch2)touch2 = t
+				else [touch1, touch2] = [touch2, t]
+			}
+		}
+		document.body.ontouchend = function(e){
+			for(let t of e.changedTouches){
+				a: if(touch2 && touch2.identifier == t.identifier)touch2 = null
+				else if(touch1 && touch1.identifier == t.identifier){
+					[touch1, touch2] = [touch2, null]
+					if(touchmoved > 0){
+						if(e.target != game && !canvparent.contains(e.target))break a
+						clicked(t.clientX, t.clientY)
+					}
+				}
+				if('value' in e.target)e.target.focus()
+				else{let target = e.target; while(!target.click)target = target.parentElement;target.dispatchEvent(new MouseEvent('click', t))}
+			}
+		}
+		let moved = 3
+		document.body.onmousedown = function(e){
+			moved = 3
+			click = e.button + 1
+		}
+		document.body.onmouseup = function(e){
+			if(e.target != game && !canvparent.contains(e.target))return (moved = 3, click = 0)
+			if(moved > 0){
+				clicked(e.clientX, e.clientY)
+			}
+			moved = 3
+			click = 0
+		}
+		oncontextmenu = e => e.preventDefault()
+		let selX = 0, selY = 0
+		function transform(){
+			//canvgrid.style.transform = "translate("+x*z*-120+"px, "+y*z*120+"px) scale("+z*120+")"
+			canvselect.style.transform = "translate("+selX+"px, "+selY+"px) scale(0.010416666666666666)"
+			canvparent.style.transform = "translate("+(x*z*-120+innerWidth/2)+"px, "+(y*z*-120+innerHeight/2)+"px) scale("+z*120+")"
+			canvparent.style.setProperty('--o', z * 10 - 1)
+		}
+
+		function select(x = NaN, y){
+			if(x != x){
+				canvselect.style.display = 'none'
+			}else{
+				canvselect.style.display = 'block'
+				selX = x
+				selY = y
+				transform()
+			}
+		}
+		select()
+		let x, y, z, board, minZoom, width, height;
+		let theme;
+		const SYSTEM = 0; const DARK = 1; const LIGHT = 2
+		function settheme(a){document.body.style.background = a ? (a == LIGHT ? "white" : "black") : ""}
+		settheme(SYSTEM)
+		function setsize(w, h = w){
+			width = w
+			height = h
+			canvparent.style.width = w + "px"
+			canvparent.style.height = h + "px"
+			board = new Uint8Array(w * h)
+			let i = board.length
+			onresize()
+			x = w / 2; y = h / 2; z = 0.5; pos()
+		}
+		onresize = function(){
+			minZoom = Math.min(innerWidth / width, innerHeight / height) / 120
+			pos()
+		}
+		pos()
+		let click = false
+		let mx = 0, my = 0;
+		document.body.onmousemove = function(e){
+			if(e.target != game && !canvparent.contains(e.target))return
+			moved--
+			let dx = -(mx - (mx = e.clientX - innerWidth / 2))
+			let dy = -(my - (my = e.clientY - innerHeight / 2))
+			if(dx != dx || dy != dy)return
+			if(click){
+				x -= dx / (z * 120)
+				y -= dy / (z * 120)
+				pos()
+				clearInterval(anim)
+			}
+		}
+		document.body.onwheel = function(e){
+			if(e.target != game && !canvparent.contains(e.target))return
+			let d = Math.max(minZoom / z, Math.min(0.995 ** e.deltaY, 1 / z))
+			z *= d
+			x += mx * (d - 1) / z / 120
+			y += my * (d - 1) / z / 120
+			pos()
+		}
+		function pos(){
+			if(z < minZoom)z = minZoom
+			if(z > 1)z = 1
+			let right = x - width + 0.01
+			let left = x
+			let up = y - height + 0.01
+			let down = y
+			if(right >= left) x = 0
+			else if(right > 0) x -= right
+			else if(left < 0) x -= left
+			if(up >= down) y = 0
+			else if(up > 0) y -= up
+			else if(down < 0) y -= down
+			transform()
+		}
+		let xa = new Uint32Array(1)
+		let xb = new Uint8Array(xa.buffer)
+
+		document.body.ontouchmove = e => {touchmoved--;for(let t of e.changedTouches){
+			clearInterval(anim)
+			a: if(!touch2 && touch1 && touch1.identifier == t.identifier){
+				if(e.target != game && !canvparent.contains(e.target))break a
+				x -= (t.clientX - touch1.clientX) / (z * 120)
+				y -= (t.clientY - touch1.clientY) / (z * 120)
+				pos()
+			}else if(touch1 && touch2){
+				if(e.target != game && !canvparent.contains(e.target))break a
+				let touch = touch1.identifier == t.identifier ? touch1 : (touch2.identifier == t.identifier ? touch2 : null)
+				if(!touch)break a
+				let other = touch == touch1 ? touch2 : touch1
+				x -= (t.clientX - touch.clientX) / (z * 120)
+				y -= (t.clientY - touch.clientY) / (z * 120)
+				let dx = touch.clientX - other.clientX
+				let dy = touch.clientY - other.clientY
+				let a = dx * dx + dy * dy
+				dx = t.clientX - other.clientX
+				dy = t.clientY - other.clientY
+				a = Math.sqrt((dx * dx + dy * dy) / a)
+				z *= a
+				pos()
+			}
+			if(touch1 && touch1.identifier == t.identifier)touch1 = t
+			else if(touch2 && touch2.identifier == t.identifier)touch2 = t
+		}}
+		setsize(20)
+		let selected = null, anim = null, shootTarget = null
+		function focus(cx, cy, click){
+			cx = Math.floor(cx) + 0.5
+			cy = Math.floor(cy) + 0.5
+			anim = setInterval(function(){
+				x += (cx - x) / 10
+				y += (cy - y) / 10
+				pos()
+				if(Math.abs(cx - x) + Math.abs(cy - y) < 0.1){
+					clearInterval(anim)
+					if(click)clicked(innerWidth / 2, innerHeight / 2)
+				}
+			},15)
+		}
+		function deselectMe(){
+			if(selected)selected.data.selected = 0
+			selected = null
+			shootTarget = null
+			buttonHTML = 'Make a move!'
+			renderButtonHTML()
+			select()
+		}
+		function renderButtonHTML(){
+			let a = me ? me.action : 0
+			let left = FREQ/1000 - (Date.now()%FREQ)/1000 + a * FREQ/-1000
+			let votes = (selected && selected != me)
+			let html = (me && me.el.parentElement) || votes ? (a > 0 || votes ? buttonHTML : `<svg viewBox="0 0 20 20" style="height: 12px;fill:var(--color)"><path d="M13.558 14.442l-4.183-4.183V4h1.25v5.741l3.817 3.817-.884.884z"></path><path d="M10 19.625A9.625 9.625 0 1119.625 10 9.636 9.636 0 0110 19.625zm0-18A8.375 8.375 0 1018.375 10 8.384 8.384 0 0010 1.625z"></path></svg> ${left>=3600?(''+Math.floor(left/3600)).padStart(2,"0")+'h':''}${(''+Math.floor((left/60))%60).padStart(2,"0")}m`) : "Spectating"
+			if(button.innerHTML == html)return
+			button.innerHTML = html
+		}
+		setInterval(renderButtonHTML, 10000)
+		let me = null, buttonHTML = 'Make a move!'
+		const ACTIONHTML = `<div class='actionpoint largeactionpoint'></div>`
+		function clicked(cx, cy){
+			clearInterval(anim)
+			cx -= innerWidth / 2
+			cy -= innerHeight / 2
+			cx /= z * 120
+			cy /= z * 120
+			cx += x
+			cy += y
+			let s = which(cx, cy, a => a instanceof Tank)
+			cx = Math.floor(cx)
+			cy = Math.floor(cy)
+			if(!s){
+				if(!selected)return
+				if(selected != me || (me ? me.action : 0) < 1)return deselectMe()
+				if(Math.abs(cx - selected.x) + Math.abs(cy - selected.y) > 1)return
+				select(cx, cy)
+				buttonHTML = ACTIONHTML+'1 Move'
+				renderButtonHTML()
+				shootTarget = null
+			}else if(s == selected){
+				deselectMe()
+			}else if(s == me){
+				if(selected)selected.data.selected = 0
+				s.data.selected = 1
+				selected = s
+				shootTarget = null
+				let range = +selected.data.range
+				buttonHTML = range >= 9 ? 'Max Level!' : ACTIONHTML+(range+1)+' Upgrade'
+				renderButtonHTML()
+			}else if(!selected){
+				s.data.selected = 1
+				selected = s
+				shootTarget = null
+				buttonHTML = me.data.health < 1 ? 'Vote' : ACTIONHTML+'1 Give one'
+				renderButtonHTML()
+			}else if(selected == me && (me ? me.action : 0) > 0){
+				if(Math.max(Math.abs(s.x - selected.x), Math.abs(s.y - selected.y)) > selected.data.range)return
+				select(s.x, s.y)
+				shootTarget = s
+				buttonHTML = ACTIONHTML+'1 Shoot!'
+				renderButtonHTML()
+			}else if(selected == me){
+				selected.data.selected = 0
+				selected = s
+				s.data.selected = 1
+			}else if(selected && selected != me && s){
+				selected.data.selected = 0
+				selected = s
+				s.data.selected = 1
+			}
+		}
+		button.onclick = function(){
+			if(!me)return
+			if(selected && selected != me){
+				let i = PLAYERS.indexOf(selected)
+				if(me.data.health < 1 && i >= 0){
+					ws.send(`vote ${i}`)
+					deselectMe()
+					return
+				}
+				if(me.action < 1 || i < 0)return
+				if(ws) ws.send(`donate ${i}`)
+				else{
+					me.action--
+					selected.action++
+				}
+			}
+			if(me.data.health < 1)return
+			if(!selected){
+				//find and focus
+				if(!me.el.parentElement)return
+				focus(me.x, me.y, true)
+			}else if(canvselect.style.display == 'none'){
+				//upgrade
+				let range = +selected.data.range
+				if(selected.action < range + 1 || range >= 9)return
+				if(ws) ws.send('upgrade')
+				else selected.upgrade()
+			}else if(shootTarget){
+				let i = PLAYERS.indexOf(shootTarget)
+				if(selected.action < 1 || i < 0)return
+				if(ws) ws.send(`shoot ${i}`)
+				else selected.shoot(shootTarget)
+			}else{
+				if(selected.action < 1)return
+				if(ws) ws.send(`move ${selX} ${selY}`)
+				else selected.move(selX, selY)
+			}
+			deselectMe()
+		}
+		let EL_SCALE = 1 / 96
+		canvparent.style.setProperty('--el-scale',EL_SCALE)
+		const SPRITES = new Set()
+		class Sprite{
+			constructor(x, y, html = '', data = {}){
+				this.el = document.createElement('sprite')
+				this.el.innerHTML = html
+				for(let j in data){
+					this.el.style.setProperty('--' + j, data[j])
+				}
+				this._x = x
+				this._y = y
+				this.data = new Proxy(this.el.style, {
+					get: (t, k) => t.getPropertyValue('--'+k),
+					set: (t, k, v) => (t.setProperty('--'+k, v), true),
+					delete: (t, k) => (t.removeProperty('--'+k), true)
+				})
+				this.rerender()
+				canvparent.appendChild(this.el)
+				SPRITES.add(this)
+			}
+			get x(){return this._x}
+			get y(){return this._y}
+			set x(a){this._x = a; this.rerender()}
+			set y(a){this._y = a; this.rerender()}
+			rerender(){
+				this.el.style.transform = 'translate('+(this._x-1/24)+'px, '+(this._y-1/24)+'px) scale(' + EL_SCALE + ')'
+			}
+			delete(){
+				this.el.remove()
+				SPRITES.delete(this)
+			}
+		}
+		const ACTIONPOINTHTML = '<div class="actionpoint"></div>'
+		function bullet({x, y, data: {col}}, {x: x1, y: y1}){
+			x1 -= x
+			y1 -= y
+			let s = new Sprite(x, y, `<div style='position: absolute; top: 45px; left: 10px; bottom: 45px; right: 10px;border-radius: 100px;background:${col};transform:rotate(${Math.atan2(y1, x1)}rad)'>`)
+			s.el.style.filter = 'none'
+			let a = 10
+			let b = setInterval(function(){
+				if(!a--)return clearInterval(b), s.delete()
+				s.x += x1 / 10
+				s.y += y1 / 10
+			}, 15)
+		}
+		class Tank extends Sprite{
+			constructor(col, x, y, name){
+				super(x, y, `
+					<div style='cursor:pointer;position:absolute;--t:calc(var(--range) / var(--el-scale) * var(--selected) * -1px);top:var(--t);left:var(--t);bottom:var(--t);right:var(--t);background:var(--col);opacity:calc(var(--selected) / 10)'></div>
+					<div class="tankbox">
+						<svg style="stroke:var(--col);margin:-8px" viewBox="0 0 104 104"><path style="stroke-width:8px" d="M 0 0 L 104 104"></path><path style="stroke-width:8px" d="M 0 104 L 104 0"></path></svg>
+						<div class='heart l'></div> <div class='heart'></div> <div class='heart r'></div>
+						<div class='actionpointcontainer'></div>
+					</div>
+					<div class="arrow"></div><div class="arrow arrleft"></div><div class="arrow arrup"></div><div class="arrow arrdown"></div>`, {range: 2, name: JSON.stringify(name), col, selected: 0, health: 3})
+				this.actionPointContainer = this.el.children[1].lastElementChild
+				this.action = 3
+			}
+			redrawPoints(){
+				let a = Math.max(0, this.action) - this.actionPointContainer.children.length
+				while(a > 0){
+					this.actionPointContainer.insertAdjacentHTML('beforeEnd', ACTIONPOINTHTML)
+					a--
+				}
+				while(a < 0){
+					this.actionPointContainer.lastElementChild.remove()
+					a++
+				}
+			}
+			die(){
+				let a = 30
+				let b = setInterval(() => {
+					this.y -= 0.02
+					this.el.style.opacity = (this.el.style.opacity || 1) - 0.03333333333
+					if(!a--){
+						this.delete()
+						clearInterval(b)
+					}
+				}, 20)
+			}
+			get action(){return this._action}
+			set action(a){this._action = a;this.redrawPoints()}
+
+			move(cx, cy){
+				this.action--
+				//move
+				let a = 15
+				let x = cx - this.x
+				let y = cy - this.y
+				let b = setInterval(() => {
+					if(!a--)return clearInterval(b),this.x = Math.round(this.x),this.y = Math.round(this.y)
+					this.x += x / 15
+					this.y += y / 15
+				}, 20)
+			}
+			shoot(target){
+				this.action--
+				//shoot
+				bullet(this, target)
+				setTimeout(() => {
+					if(!--target.data.health){
+						target.die()
+					}
+				}, 200)
+			}
+			upgrade(){
+				this.action -= +this.data.range + 1
+				this.data.range++
+			}
+		}
+		function which(x, y, predicate){
+			for(let s of SPRITES){
+				if(s._x <= x && s._x + 1 >= x && s._y <= y && s._y + 1 >= y && (!predicate || predicate(s)))return s
+			}
+			return null
+		}
+		let [, game, titlescreen, tut] = document.body.children
+
+		if(!localStorage.tutorial){
+			titlescreen.appendChild(titlescreen.children[1])
+			titlescreen.appendChild(titlescreen.children[2])
+			titlescreen.children[1].style.transform = 'scale(1.2)'
+		}
+		function pause(){
+			tut.style.display = 'none'
+			clearTimeout(pause.timeout)
+			game.style.filter = 'blur(10px)'
+			titlescreen.style.filter = 'blur(0px)'
+			titlescreen.style.opacity = '1'
+			titlescreen.style.display = 'block'
+			pause.timeout = setTimeout(() => {
+				titlescreen.style.filter = ''
+			}, 300)
+		}
+		function unpause(){
+			clearTimeout(pause.timeout)
+			game.style.filter = 'blur(0px)'
+			titlescreen.style.filter = 'blur(10px)'
+			titlescreen.style.opacity = '0'
+			pause.timeout = setTimeout(() => {
+				game.style.filter = ''
+				titlescreen.style.display = 'none'
+			}, 300)
+		}
+		function halfpause(){
+			clearTimeout(pause.timeout)
+			game.style.filter = 'blur(0px)'
+			game.classList.add('blurnodes')
+			titlescreen.style.filter = 'blur(10px)'
+			titlescreen.style.opacity = '0'
+			pause.timeout = setTimeout(() => {
+				game.style.filter = ''
+				titlescreen.style.display = 'none'
+			}, 300)
+		}
+		const tap = 1
+		const TUTORIALS = [
+			{ text: 'Each player controls a tank, represented by a boxed square', tap }, //0
+			{ text: "This is your enemy\nLet's destroy him", action: () => tutfocus(enemy.el), tap }, //1
+			{ text: "This is your tank\nClick on it", action: () => tutfocus(me.el) }, //2
+			{ text: "Your tank can shoot in this area.\nYou can also move where the arrows show", action: () => tutfocus(canvgrid, me.el, enemy.el, ally.el, enemy2.el), tap }, //3
+			{ text: "Move left to get in reach of the enemy tank", action: () => tutfocus(me.el, canvgrid, enemy.el) }, //4
+			{ text: "Confirm your move", action: () => tutfocus(button, me.el, canvselect) }, //5
+			{ text: "You're now in reach of the enemy!\nClick on your tank again", action: () => tutfocus(me.el, enemy.el, canvgrid) }, //6
+			{ text: "Select the enemy tank", action: () => tutfocus(me.el, enemy.el, canvgrid) }, //7
+			{ text: "Confirm your move to shoot him!", action: () => tutfocus(button, me.el, canvselect, enemy.el) }, //8
+			{ text: "Congrats! You eliminated him", action: () => tutfocus(me.el, enemy.el), tap }, //9
+			{ text: "You start with 3 health\nand die when you lose all of them", action: () => tutfocus(me.el, enemy.el), tap }, //10
+			{ text: "Every move you make uses up an action point", action: () => tutfocus(me.el, enemy.el), tap }, //11
+			{ text: "You earn a few actions points automatically every day", action: () => tutfocus(me.el, enemy.el), tap }, //12
+			{ text: "Your ally hasn't got enough action points to destroy the grey enemy!", action: () => (focus(10,6),tutfocus(ally.el, enemy2.el)), tap }, //13
+			{ text: "Click on him to donate him some action points", action: () => (focus(10,6),tutfocus(ally.el)) }, //14
+			{ text: "Confirm down below", action: () => tutfocus(button, ally.el) }, //15
+			{ text: "With your help,\nGrey enemy is no more!", action: () => {
+				tutfocus(ally.el, enemy2.el, canvgrid)
+				setTimeout(()=>{let b = setInterval(function(){
+					if(!ally.action--)return clearInterval(b), next()
+					bullet(ally, enemy2)
+					setTimeout(()=>{if(!--enemy2.data.health)enemy2.die()},200)
+				}, 1000)},2000)
+			} }, //16
+			{ text: "One last thing...", action: () => tutfocus(), tap }, //17
+			{ text: "You can upgrade your tank to increase your range", action: () => me.action += 3, tap }, //18
+			{ text: "Click on your tank", action: () => (focus(me.x, me.y, false), tutfocus(me.el)) }, //19
+			{ text: "Upgrade below!", action: () => tutfocus(button) }, //20
+			{ text: "Nice range!\nNo one messes with you!", action: () => (selected = me, me.data.selected=1, tutfocus(me.el, canvgrid),localStorage.tutorial='true'), tap } //21
+		]; let currentTutorial, enemy, ally, enemy2
+		let lastTutorial = 0
+		function next(){
+			currentTutorial++
+			if(!TUTORIALS[currentTutorial])return pause()
+			tut.innerText = TUTORIALS[currentTutorial].text
+			if(TUTORIALS[currentTutorial].tap)tut.classList.add('tap')
+			else tut.classList.remove('tap')
+			let action = TUTORIALS[currentTutorial].action
+			action && action()
+		}
+		function tutorial(){
+			setsize(20)
+			x = 11; y = 11
+			transform()
+			lastTutorial = Date.now()
+			for(s of SPRITES)s.delete()
+			me = new Tank("#E52", 12, 10, 'me')
+			me.el.id = 'me'
+			enemy = new Tank("#25E", 9, 9, 'enemy')
+			enemy.data.health=1
+			enemy.action=0
+			enemy2 = new Tank("#555", 8, 3, 'enemy 2')
+			enemy2.action=1
+			ally = new Tank("#5E2", 10, 5, 'ally')
+			enemy.data.health=1
+			ally.action = 2
+			halfpause()
+			tut.style.display = 'block'
+			currentTutorial = -1
+			tutfocus()
+			next()
+		}
+		tut.onclick = function(e){
+			if(Date.now() - lastTutorial < 700)return
+			lastTutorial = Date.now()
+			let {clientX: cx, clientY: cy} = e
+			cx -= innerWidth / 2
+			cy -= innerHeight / 2
+			cx /= z * 120
+			cy /= z  * 120
+			cx += x
+			cy += y
+			if(TUTORIALS[currentTutorial].tap)return next()
+			if((currentTutorial == 2 || currentTutorial == 6 || currentTutorial == 19) && which(cx, cy) == me){
+				clicked(e.clientX, e.clientY)
+				next()
+			}else if(currentTutorial == 4 && which(cx + 1, cy) == me){
+				clicked(e.clientX, e.clientY)
+				next()
+			}else if((currentTutorial == 5 || currentTutorial == 8 || currentTutorial == 15 || currentTutorial == 20) && rectHas(button.getBoundingClientRect(), e)){
+				button.click()
+				next()
+			}if(currentTutorial == 7 && which(cx, cy) == enemy){
+				clicked(e.clientX, e.clientY)
+				next()
+			}else if(currentTutorial == 14 && which(cx, cy) == ally){
+				clicked(e.clientX, e.clientY)
+				next()
+			}
+		}
+		function tutfocus(...n){
+			tutfocus.nodes.map(a=>a.style.filter = '');
+			(tutfocus.nodes = n).map(a=>a.style.filter = 'none')
+		}
+		tutfocus.nodes = []
+		function rectHas(rect, e){
+			return e.clientX > rect.left && e.clientY > rect.top && e.clientX < rect.right && e.clientY < rect.bottom
+		}
+
+		function randomCode(){
+			return (Date.now().toString(36)+Math.floor(Math.random()*36**6).toString(36).padStart('0',6)).slice(2)
+		}
+		function parseTank(t){
+			let [x, y, points, ...name] = t.split(' ')
+			name = name.join(' ')
+			let tank = new Tank(COLORS[PLAYERS.length%15], +x, +y, name)
+			tank.action = +points.slice(2)
+			tank.data.range = +points[1]
+			points = +points[0]
+			tank.data.health = points
+			if(!points)tank.delete()
+			return tank
+		}
+		let FREQ = 432e5
+		let PLAYERS = []
+		let COLORS = ['#E52', '#E25', '#5E5', '#22E', '#85E', '#888', '#EE2', '#2EE', '#E5E', '#C00', '#292', 'var(--color)', '#917', '#851', '#277']
+		let ws = null /*('wss://localhost:443')*/
+		function newgame(){
+			unpause()
+			ws = new WebSocket('ws://localhost:80/' + localStorage.token + '/' + (localStorage.name || ''))
+			ws.onmessage = function(e){
+				let [code, ...data] = e.data.split('\n'), meta;
+				[code, ...meta] = code.split(' ')
+				//possible responses:
+				//board, moved, shot, upgraded, actionpoint, gotpoints, newplayer
+				if(code == 'board'){
+					let [f, w, h, i] = meta
+					FREQ = f
+					setsize(w, h)
+					for(let t of data) PLAYERS.push(parseTank(t))
+					me = PLAYERS[i]
+					if(me){
+						focus(me.x, me.y)
+						me.el.id = 'me'
+					}
+					renderButtonHTML()
+				}else if(code == 'moved'){
+					let [i, x, y] = meta
+					PLAYERS[i].move(x, y)
+				}else if(code == 'shot'){
+					let [i, i2] = meta
+					PLAYERS[i].shoot(PLAYERS[i2])
+				}else if(code == 'donated'){
+					let [i, i2] = meta
+					PLAYERS[i].action--
+					PLAYERS[i2].action++
+				}else if(code == 'upgraded'){
+					PLAYERS[meta[0]].upgrade()
+				}else if(code == 'actionpoint'){
+					for(let t of PLAYERS)t.action++
+				}else if(code == 'gotpoints'){
+					PLAYERS[meta[0]].action += +meta[1]
+				}else if(code == 'newplayer'){
+					console.log(data)
+					PLAYERS.push(parseTank(data[0]))
+				}
+			}
+			ws.onclose = () => location.reload()
+		}
+		localStorage.token = localStorage.token || [...crypto.getRandomValues(new Uint8Array(32))].map(a=>(a<16?'0':'')+a.toString(16)).join('')
+	</script>
+</html>
