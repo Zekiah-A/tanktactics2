@@ -571,7 +571,7 @@
 		let ws = null
 		function newgame(){
 			unpause()
-			ws = new WebSocket('ws://server.canv.tk:444/' + localStorage.token + '/' + (localStorage.name || ''))
+			ws = new WebSocket('wss://server.canv.tk:444/' + localStorage.token + '/' + (localStorage.name || ''))
 			ws.onmessage = function(e){
 				let [code, ...data] = e.data.split('\n'), meta;
 				[code, ...meta] = code.split(' ')
