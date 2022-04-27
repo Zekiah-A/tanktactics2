@@ -11,7 +11,7 @@ export const DEFAULT_FREQUENCY = 43200 //Time in seconds it takes to get an acti
 export const DEFAULT_RANGE = 2 //Range that tanks start out with
 export const ALLOW_MIDGAME_JOINS = false //Allow people to join mid-game
 export const MAX_PLAYERS = 1 / 25  //Maximum number of players. If smaller than one, it's interpreted as a ratio of the number of tiles on the board
-export const ALLOW_RENAMING = false //Allow people to change their name midgame
+export const ALLOW_RENAMING = true //Allow people to change their name midgame
 
 ///// Options regarding tank behaviour /////
 export const ALLOW_JURY = true //Allow for dead tanks to vote for a person to recieve bonus action points

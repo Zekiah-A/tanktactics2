@@ -27,7 +27,7 @@
 			<div style="font-size:70px;text-align:center;margin-top: 20vh;margin-bottom: 20vh">Tank-Tactics!</div>
 			<div class="btn" onclick="newgame()">Join game</div>
 			<div class="btn" onclick="tutorial()">Tutorial</div>
-			<div class="btn">Name: <input id="nameinput" onkeypress="localStorage.name=this.value;if(event.keyCode==13)this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" /></div>
+			<div class="btn">Name: <input id="nameinput" onchange="localStorage.name=this.value;this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" /></div>
 		</titlescreen>
 		<tut>
 
