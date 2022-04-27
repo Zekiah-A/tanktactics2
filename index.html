@@ -589,6 +589,8 @@
 					let [f, w, h, i] = meta
 					FREQ = f
 					setsize(w, h)
+					PLAYERS = []
+					for(let s of SPRITES)s.delete()
 					for(let t of data) PLAYERS.push(parseTank(t))
 					me = PLAYERS[i]
 					if(me){
