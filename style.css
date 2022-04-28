@@ -123,7 +123,7 @@ sprite{
 	display: flex;
 	text-align: center;
 	justify-content: center;
-	opacity: min(calc(var(--o) - 3), 0.5);
+	opacity: min(calc(var(--o) - 1), 0.8);
 }
 
 #button{
