@@ -74,8 +74,8 @@
 		let selX = 0, selY = 0
 		function transform(){
 			//canvgrid.style.transform = "translate("+x*z*-120+"px, "+y*z*120+"px) scale("+z*120+")"
-			canvselect.style.transform = "translate("+selX+"px, "+selY+"px) scale(0.010416666666666666)"
-			canvparent.style.transform = "translate("+(x*z*-120+innerWidth/2)+"px, "+(y*z*-120+innerHeight/2)+"px) scale("+z*120+")"
+			canvselect.style.transform = "translate("+selX*4+"px, "+selY*4+"px) scale(0.0416666666666666)"
+			canvparent.style.transform = "translate("+(x*z*-120+innerWidth/2)+"px, "+(y*z*-120+innerHeight/2)+"px) scale("+z*30+")"
 			canvparent.style.setProperty('--o', z * 10 - 1)
 		}
 
@@ -98,10 +98,8 @@
 		function setsize(w, h = w){
 			width = w
 			height = h
-			canvparent.style.width = w + "px"
-			canvparent.style.height = h + "px"
-			board = new Uint8Array(w * h)
-			let i = board.length
+			canvparent.style.width = w*4 + "px"
+			canvparent.style.height = h*4 + "px"
 			onresize()
 			x = w / 2; y = h / 2; z = 0.5; pos()
 		}
@@ -244,7 +242,7 @@
 				s.data.selected = 1
 				selected = s
 				shootTarget = null
-				buttonHTML = me.data.health < 1 ? 'Vote' : ACTIONHTML+'1 Give one'
+				buttonHTML = me && me.data.health < 1 ? 'Vote' : ACTIONHTML+'1 Give one'
 				renderButtonHTML()
 			}else if(selected == me && (me ? me.action : 0) > 0){
 				if(Math.max(Math.abs(s.x - selected.x), Math.abs(s.y - selected.y)) > selected.data.range)return
@@ -328,7 +326,7 @@
 			set x(a){this._x = a; this.rerender()}
 			set y(a){this._y = a; this.rerender()}
 			rerender(){
-				this.el.style.transform = 'translate('+(this._x-1/24)+'px, '+(this._y-1/24)+'px) scale(' + EL_SCALE + ')'
+				this.el.style.transform = 'translate('+(this._x-1/24)*4+'px, '+(this._y-1/24)*4+'px) scale(' + EL_SCALE*4 + ')'
 			}
 			delete(){
 				this.el.remove()
@@ -488,7 +486,7 @@
 			{ text: "You can upgrade your tank to increase your range", action: () => me.action += 3, tap }, //18
 			{ text: "Click on your tank", action: () => (focus(me.x, me.y, false), tutfocus(me.el)) }, //19
 			{ text: "Upgrade below!", action: () => tutfocus(button) }, //20
-			{ text: "Nice range!\nNo one messes with you!", action: () => (selected = me, me.data.selected=1, game.classList.remove('blurnodes'),localStorage.tutorial='true'), tap } //21
+			{ text: "Nice range!\nNo one messes with you!", action: () => (selected = me, me.data.selected=1, game.classList.remove('blurnodes'),localStorage.tutorial='true') } //21
 		]; let currentTutorial, enemy, ally, enemy2
 		let lastTutorial = 0
 		function next(){
@@ -533,7 +531,7 @@
 			cx += x
 			cy += y
 			if(TUTORIALS[currentTutorial].tap)return next()
-			if((currentTutorial == 2 || currentTutorial == 6 || currentTutorial == 19) && which(cx, cy) == me){
+			if(currentTutorial == 21){next()}else if((currentTutorial == 2 || currentTutorial == 6 || currentTutorial == 19) && which(cx, cy) == me){
 				clicked(e.clientX, e.clientY)
 				next()
 			}else if(currentTutorial == 4 && which(cx + 1, cy) == me){
