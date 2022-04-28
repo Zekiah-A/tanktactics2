@@ -50,7 +50,7 @@ input{
 	bottom: 0;
 	right: 0;
 	background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgAQMAAADYVuV7AAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAGUExURXh4eEdwTAC/+hYAAAACdFJOU4AATRBVcwAAABxJREFUOMtjYCAD8P+Hgw+jnFHOKGeUQw8OGQAALZ/EZvO2VZgAAAAASUVORK5CYII=');
-	background-size: 1px;
+	background-size: 4px;
 	opacity: var(--o);
 }
 #canvparent{
@@ -121,6 +121,7 @@ sprite{
 	right: 0;
 	bottom: -4px;
 	display: flex;
+	text-align: center;
 	justify-content: center;
 	opacity: min(calc(var(--o) - 3), 0.5);
 }
