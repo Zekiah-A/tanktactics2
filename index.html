@@ -267,16 +267,15 @@
 				let i = ws ? PLAYERS.indexOf(selected) : 1
 				if(me.data.health < 1 && i >= 0){
 					ws.send(`vote ${i}`)
-					deselectMe()
-					return
+					return deselectMe()
 				}
 				if(me.action < 1 || i < 0)return
 				if(ws) ws.send(`donate ${i}`)
 				else{
 					me.action--
 					selected.action++
-					return deselectMe()
 				}
+				return deselectMe()
 			}
 			if(me.data.health < 1)return
 			if(!selected){
