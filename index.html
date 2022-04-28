@@ -220,6 +220,7 @@
 			let s = which(cx, cy, a => a instanceof Tank)
 			cx = Math.floor(cx)
 			cy = Math.floor(cy)
+			if(cx < 0 || cy < 0 || cx >= width || cy >= height)return
 			if(!s){
 				if(!selected)return
 				if(selected != me || (me ? me.action : 0) < 1)return deselectMe()
