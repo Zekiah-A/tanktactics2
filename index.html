@@ -243,7 +243,8 @@
 				s.data.selected = 1
 				selected = s
 				shootTarget = null
-				buttonHTML = me && me.data.health < 1 ? 'Vote' : ACTIONHTML+'1 Give one'
+                                let inRange = Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2
+				buttonHTML = me && me.data.health < 1 ? 'Vote' : (inRange ? ACTIONHTML+'1 Give one' : 'Too far away')
 				renderButtonHTML()
 			}else if(selected == me && (me ? me.action : 0) > 0){
 				if(Math.max(Math.abs(s.x - selected.x), Math.abs(s.y - selected.y)) > selected.data.range)return
@@ -269,7 +270,8 @@
 					ws.send(`vote ${i}`)
 					return deselectMe()
 				}
-				if(me.action < 1 || i < 0)return
+                                let inRange = Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2
+				if(me.action < 1 || i < 0 || !inRange)return
 				if(ws) ws.send(`donate ${i}`)
 				else{
 					me.action--
@@ -509,9 +511,9 @@
 			enemy = new Tank("#25E", 9, 9, 'enemy')
 			enemy.data.health=1
 			enemy.action=0
-			enemy2 = new Tank("#555", 8, 3, 'enemy 2')
+			enemy2 = new Tank("#555", 8, 4, 'enemy 2')
 			enemy2.action=1
-			ally = new Tank("#5E2", 10, 5, 'ally')
+			ally = new Tank("#5E2", 10, 6, 'ally')
 			enemy.data.health=1
 			ally.action = 2
 			halfpause()
