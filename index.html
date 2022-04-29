@@ -175,6 +175,14 @@
 			if(touch1 && touch1.identifier == t.identifier)touch1 = t
 			else if(touch2 && touch2.identifier == t.identifier)touch2 = t
 		}}
+                let audios = {
+			invalid: new Audio('https://hot-potato.reddit.com/media/interactions/invalid.mp3'),
+			highlight: new Audio('https://hot-potato.reddit.com/media/interactions/highlight.mp3'),
+			select: new Audio('https://hot-potato.reddit.com/media/interactions/select-color.mp3'),
+			close: new Audio('https://hot-potato.reddit.com/media/interactions/close-pallette.mp3'),
+			confirm: new Audio('https://hot-potato.reddit.com/media/interactions/cooldown-start.mp3'),
+			waitEnd: new Audio('https://hot-potato.reddit.com/media/interactions/cooldown-end.mp3')
+		}
 		setsize(20)
 		let selected = null, anim = null, shootTarget = null
 		function focus(cx, cy, click){
@@ -223,14 +231,16 @@
 			if(cx < 0 || cy < 0 || cx >= width || cy >= height)return
 			if(!s){
 				if(!selected)return
-				if(selected != me || (me ? me.action : 0) < 1)return deselectMe()
+				if(selected != me || (me ? me.action : 0) < 1)return deselectMe(), audios.close.play()
 				if(Math.abs(cx - selected.x) + Math.abs(cy - selected.y) > 1)return
 				select(cx, cy)
 				buttonHTML = ACTIONHTML+'1 Move'
 				renderButtonHTML()
 				shootTarget = null
+                                audios.select.play()
 			}else if(s == selected){
 				deselectMe()
+                                audios.close.play()
 			}else if(s == me){
 				if(selected)selected.data.selected = 0
 				s.data.selected = 1
@@ -239,6 +249,7 @@
 				let range = +selected.data.range
 				buttonHTML = range >= 9 ? 'Max Level!' : ACTIONHTML+(range+1)+' Upgrade'
 				renderButtonHTML()
+                                audios.highlight.play()
 			}else if(!selected){
 				s.data.selected = 1
 				selected = s
@@ -246,16 +257,19 @@
                                 let inRange = me ? Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2 : true
 				buttonHTML = me && me.data.health < 1 ? 'Vote' : (inRange ? ACTIONHTML+'1 Give one' : 'Too far away')
 				renderButtonHTML()
+                                audios.highlight.play()
 			}else if(selected == me && (me ? me.action : 0) > 0){
 				if(Math.max(Math.abs(s.x - selected.x), Math.abs(s.y - selected.y)) > selected.data.range)return
 				select(s.x, s.y)
 				shootTarget = s
 				buttonHTML = ACTIONHTML+'1 Shoot!'
 				renderButtonHTML()
+                                audios.select.play()
 			}else if(selected == me){
 				selected.data.selected = 0
 				selected = s
 				s.data.selected = 1
+                                audios.highlight.play()
 			}else if(selected && selected != me && s){
 				selected.data.selected = 0
 				selected = s
@@ -263,6 +277,7 @@
                                 let inRange = me ? Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2 : true
 				buttonHTML = me && me.data.health < 1 ? 'Vote' : (inRange ? ACTIONHTML+'1 Give one' : 'Too far away')
 				renderButtonHTML()
+                                audios.highlight.play()
 			}
 		}
 		button.onclick = function(){
@@ -270,11 +285,13 @@
 			if(selected && selected != me){
 				let i = ws ? PLAYERS.indexOf(selected) : 1
 				if(me.data.health < 1 && i >= 0){
+                                        audios.confirm.play()
 					ws.send(`vote ${i}`)
 					return deselectMe()
 				}
                                 let inRange = Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2
-				if(me.action < 1 || i < 0 || !inRange)return
+				if(me.action < 1 || i < 0 || !inRange)return audios.invalid.play()
+                                audios.confirm.play()
 				if(ws) ws.send(`donate ${i}`)
 				else{
 					me.action--
@@ -287,19 +304,23 @@
 				//find and focus
 				if(!me.el.parentElement)return
 				focus(me.x, me.y, true)
+                                audios.highlight.play()
 			}else if(canvselect.style.display == 'none'){
 				//upgrade
 				let range = +selected.data.range
-				if(selected.action < range + 1 || range >= 9)return
+				if(selected.action < range + 1 || range >= 9)return audios.invalid.play()
+                                audios.confirm.play()
 				if(ws) ws.send('upgrade')
 				else selected.upgrade()
 			}else if(shootTarget){
 				let i = ws ? PLAYERS.indexOf(shootTarget) : 1
-				if(selected.action < 1 || i < 0)return
+				if(selected.action < 1 || i < 0)return audios.invalid.play()
+                                audios.confirm.play()
 				if(ws) ws.send(`shoot ${i}`)
 				else selected.shoot(shootTarget)
 			}else{
-				if(selected.action < 1)return
+				if(selected.action < 1)return audios.invalid.play()
+                                audios.confirm.play()
 				if(ws) ws.send(`move ${selX} ${selY}`)
 				else selected.move(selX, selY)
 			}
