@@ -243,7 +243,7 @@
 				s.data.selected = 1
 				selected = s
 				shootTarget = null
-                                let inRange = Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2
+                                let inRange = me ? Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2 : true
 				buttonHTML = me && me.data.health < 1 ? 'Vote' : (inRange ? ACTIONHTML+'1 Give one' : 'Too far away')
 				renderButtonHTML()
 			}else if(selected == me && (me ? me.action : 0) > 0){
@@ -260,7 +260,7 @@
 				selected.data.selected = 0
 				selected = s
 				s.data.selected = 1
-                                let inRange = Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2
+                                let inRange = me ? Math.max(Math.abs(me.x - selected.x), Math.abs(me.y - selected.y)) <= me.data.range * 2 : true
 				buttonHTML = me && me.data.health < 1 ? 'Vote' : (inRange ? ACTIONHTML+'1 Give one' : 'Too far away')
 				renderButtonHTML()
 			}
