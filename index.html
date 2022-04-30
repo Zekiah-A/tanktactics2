@@ -635,7 +635,7 @@
 				}else if(code == 'upgraded'){
 					PLAYERS[meta[0]].upgrade()
 				}else if(code == 'actionpoint'){
-					for(let t of PLAYERS)if(t.action<4)t.action++
+					for(let t of PLAYERS)if(t.action < 4 && t.data.health > 0)t.action++
 				}else if(code == 'gotpoints'){
 					PLAYERS[meta[0]].action += +meta[1]
 				}else if(code == 'newplayer'){
