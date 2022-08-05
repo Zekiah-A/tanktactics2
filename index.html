@@ -29,8 +29,8 @@
 			<div class="btn" onclick="tutorial()">Tutorial</div>
 			<div class="btn">Name: <input id="nameinput" onchange="localStorage.name=this.value;this.blur()" onblur="this.style.color='lime',setTimeout(()=>this.style.color='#808080',1000)" placeholder="..." maxlength='16' style="width:90px;font-size:25px;text-overflow:ellipsis;color:#808080" spellcheck="no" /></div>
                         <br>
-                        <div class="btn">Recover account from code: </div><input type="text" onchange="localstorage.key=this.value;this.blur();newgame();"/>
-                        <a href="" target="_blank" download="secret_account_code.txt" onclick="this.href = 'data:attachment/text,' + encodeURI(localstorage.key);this.click()">Save my account recovery key</a>
+                        <div class="btn" style="font-size: 15px;">Recover account from code: </div><input type="text" onchange="localstorage.key=this.value;this.blur();newgame();"/>
+                        <a href="" target="_blank" download="secret_account_code.txt" onclick="this.href = 'data:attachment/text,' + encodeURI(localstorage.key);this.click()" style="font-size: 10px;" Save my account recovery key</a>
 		</titlescreen>
 		<tut>
 
